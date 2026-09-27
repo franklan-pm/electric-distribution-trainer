@@ -106,6 +106,20 @@
   .node:hover rect, .node:hover circle{ filter:brightness(1.35); }
   .node.selected rect, .node.selected circle{ stroke:var(--signal-amber); stroke-width:3; }
   .diagram-hint{font-family:'IBM Plex Mono'; font-size:14px; color:var(--muted); margin-bottom:14px;}
+  .legend svg{display:inline-block; vertical-align:middle;}
+  .node text{pointer-events:none;}
+  .node.selected rect[fill="transparent"]{stroke:none;}
+  .node.selected line:not(.hit){filter:brightness(1.3) drop-shadow(0 0 3px rgba(245,166,35,.6));}
+  .node:hover text{fill:var(--paper);}
+  .node.selected text{fill:var(--signal-amber);}
+  .hit{stroke:transparent; stroke-width:16; fill:none;}
+  .read-head{font-family:'Space Grotesk'; font-size:18px; margin:26px 0 4px;}
+  .read-intro{font-size:15.5px; color:var(--muted); margin:0 0 12px; line-height:1.5;}
+  .read-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px;}
+  .read-card{background:var(--panel-navy-2); border:1px solid #1D4266; border-radius:8px; padding:14px 16px;}
+  .read-card h4{font-family:'Space Grotesk'; font-size:16.5px; margin:0 0 6px; color:var(--paper);}
+  .read-card p{font-size:15.5px; line-height:1.55; margin:0 0 8px; opacity:.92;}
+  .read-card p:last-child{margin-bottom:0;}
 
   #infoCard{
     background:var(--panel-navy-2);
@@ -278,15 +292,49 @@
     <div class="diagram-head">
       <h2>One-line diagram: substation to customer</h2>
       <div class="legend">
-        <span><i class="swatch" style="background:var(--signal-amber)"></i>primary (energized, ~12kV)</span>
-        <span><i class="swatch" style="background:var(--line-cyan)"></i>secondary / service (120/240V)</span>
-        <span><i class="swatch" style="background:var(--copper)"></i>underground path</span>
-        <span><i class="swatch" style="background:var(--line-cyan-dim);border-top:2px dashed var(--line-cyan)"></i>SCADA comms</span>
+        <span><svg width="26" height="8"><line x1="1" y1="4" x2="25" y2="4" stroke="#9FC0D6" stroke-width="2.5"/></svg>overhead (OH) = solid</span>
+        <span><svg width="26" height="8"><line x1="1" y1="4" x2="25" y2="4" stroke="#9FC0D6" stroke-width="2.5" stroke-dasharray="6 4"/></svg>underground (UG) = dashed</span>
+        <span><i class="swatch" style="background:var(--signal-amber)"></i>primary (~12kV)</span>
+        <span><i class="swatch" style="background:var(--line-cyan)"></i>secondary (120/240V)</span>
+        <span><svg width="26" height="8"><line x1="1" y1="4" x2="25" y2="4" stroke="#B9A9F2" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg>SCADA comms / monitoring</span>
       </div>
     </div>
-    <div class="diagram-hint">Click any labeled symbol below.</div>
-    <svg id="diagramSvg" viewBox="0 0 1000 400" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="diagram-hint">Color = voltage level · line style = overhead vs. underground. Click any labeled symbol or line below.</div>
+    <svg id="diagramSvg" viewBox="0 0 1000 510" xmlns="http://www.w3.org/2000/svg"></svg>
     <div id="infoCard"><div class="placeholder">Select a piece of equipment above to see what it does and why it matters.</div></div>
+
+    <h3 class="read-head">How to read this diagram</h3>
+    <p class="read-intro">A one-line diagram draws each circuit as a single line, even when it really carries three phase wires. The conventions below are the ones this diagram uses.</p>
+    <div class="read-grid">
+      <div class="read-card">
+        <h4>Feeder vs. lateral</h4>
+        <p>The <strong>feeder</strong> is the continuous three-phase backbone leaving the substation, labeled “3φ, OH.” It’s the trunk.</p>
+        <p>A <strong>lateral</strong> is labeled on the tap conductor itself (“1φ tap, OH”), not on a pole, because a lateral is a circuit, not a piece of hardware. This is usually where a single-phase tap peels off to serve a smaller area or a single large customer.</p>
+      </div>
+      <div class="read-card">
+        <h4>Overhead vs. underground: one rule</h4>
+        <p><strong>Solid = overhead, dashed = underground</strong>, applied the same way to primary and secondary. Color separates <span style="color:var(--signal-amber)">primary (orange, ~12kV)</span> from <span style="color:var(--line-cyan)">secondary (blue, 120/240V)</span>, so color and line style each carry exactly one meaning.</p>
+        <p>The <strong>riser pole</strong> marks the literal point where an overhead conductor becomes a cable and goes into the ground. It’s a real piece of hardware worth knowing, since it’s where crews actually do the transition splice.</p>
+      </div>
+      <div class="read-card">
+        <h4>Service drop vs. service lateral</h4>
+        <p>“<strong>Service drop</strong>” is reserved for the overhead conductor from a pole transformer to the customer. The underground equivalent, from a vault or pad-mount transformer, is a <strong>service lateral</strong>.</p>
+      </div>
+      <div class="read-card">
+        <h4>Recloser and switch</h4>
+        <p>Both show their normal state (<strong>N.C.</strong>, normally closed) right in the label. That’s the single most important thing a one-line communicates about a switching device.</p>
+        <p>A <strong>recloser</strong> is a self-contained circuit breaker with built-in relaying. It senses fault current, opens automatically, waits a set interval, and recloses to test whether the fault cleared (a tree branch, momentary contact) or persists (a downed conductor). It typically goes through 2–4 operations before locking out and staying open, which is why the lights sometimes blink a few times before an outage actually sticks. That’s the recloser doing its job.</p>
+      </div>
+      <div class="read-card">
+        <h4>SCADA</h4>
+        <p>The control center has monitoring/control links (dotted) into the recloser and the switch. Those are the two points where an operator can see status and, for the switch, operate it remotely from the office.</p>
+        <p>Not every device on a feeder is SCADA-equipped. The fuse and transformers here are not, which is realistic: fuses are purely local, non-communicating protective devices.</p>
+      </div>
+      <div class="read-card">
+        <h4>Where’s the feeder tie?</h4>
+        <p>Left out on purpose. Ties introduce backfeed and restoration, which are easier to learn once primary vs. secondary and OH vs. UG are solid. You can work with a tie hands-on in the <strong>Playground</strong> tab, and it’s still in the Glossary.</p>
+      </div>
+    </div>
   </section>
 
   <!-- PLAYGROUND -->
@@ -407,17 +455,23 @@ const EQUIP = [
     short:'The main trunk circuit carrying primary voltage out from a substation to a whole service area.',
     long:'Feeders are the backbone circuits leaving the substation, usually three-phase, carrying power at primary distribution voltage to an entire neighborhood or district. Utilities track feeder loading closely — an overloaded feeder is a common trigger for capital investment (reconductoring, a new feeder, or load transfer to a neighboring circuit).'},
   {id:'lateral', name:'Lateral', cat:'Power Delivery Path', tag:'Primary · often 1-phase',
-    short:'A smaller branch tapped off a feeder, serving a street or a handful of customers.',
-    long:'Laterals (also called taps or branches) peel off the main feeder to reach smaller pockets of load — a side street, a cul-de-sac. They’re usually protected by a fuse at the tap point so a fault on the lateral doesn’t take down the whole feeder. Laterals are numerous, so they dominate outage counts even though each one affects few customers.'},
+    short:'A smaller branch circuit tapped off a feeder, serving a street, a small area, or a single large customer.',
+    long:'Laterals (also called taps or branches) peel off the main feeder to reach smaller pockets of load — a side street, a cul-de-sac, or a single large customer. A lateral is a circuit, not a piece of hardware: it’s usually a single-phase tap, and on a one-line it’s labeled on the conductor itself (e.g., “1φ tap, OH”). Laterals are usually protected by a fuse at the tap point so a fault on the lateral doesn’t take down the whole feeder. They’re numerous, so they dominate outage counts even though each one affects few customers.'},
   {id:'transformer', name:'Distribution Transformer', cat:'Voltage Transformation', tag:'~12kV → 120/240V',
     short:'Steps primary voltage down to the 120/240V customers actually use.',
     long:'The last voltage step before the customer. Can be pole-mounted (overhead systems), pad-mounted (green boxes at ground level), or submersible units inside a vault (underground systems). These are the most numerous transformer assets on the system, which makes them a major line item in asset-management and replacement budgets.'},
-  {id:'service', name:'Service Drop', cat:'Power Delivery Path', tag:'Secondary · 120/240V',
-    short:'The final short conductor run from the transformer to the customer’s meter.',
-    long:'The last few dozen feet of wire or cable connecting a distribution transformer to an individual customer’s meter base. Overhead versions are the classic wire running from a pole to the roofline; underground versions run in conduit from a pad-mount transformer or vault.'},
+  {id:'service', name:'Service Drop', cat:'Power Delivery Path', tag:'Secondary · 120/240V · overhead',
+    short:'The final overhead conductor run from a pole transformer to the customer’s meter.',
+    long:'The last few dozen feet of overhead wire connecting a pole-mounted distribution transformer to an individual customer’s meter base — the classic wire running from a pole to the roofline. The term is reserved for overhead service; the underground equivalent is called a service lateral.'},
+  {id:'servicelateral', name:'Service Lateral', cat:'Power Delivery Path', tag:'Secondary · 120/240V · underground',
+    short:'The underground equivalent of a service drop: buried cable from a vault or pad-mount transformer to the meter.',
+    long:'A service lateral is the underground secondary run from a distribution transformer (in a vault or a pad-mount box) to the customer’s meter, usually in conduit. It does the same job as a service drop, but because it’s buried, repairs mean locating and excavating rather than just re-hanging a wire — one reason underground service costs more to install and fix.'},
   {id:'pole', name:'Pole', cat:'Structures & Pathways', tag:'Wood · steel · concrete',
     short:'The overhead support structure for wires, transformers, and switching equipment.',
     long:'Poles carry conductors, transformers, streetlights, and communications attachments (often for a fee — "pole attachment" revenue). Wood pole age and decay is one of the most common drivers of overhead system replacement programs, so pole inspection data is a frequent input to capital planning.'},
+  {id:'riser', name:'Riser Pole', cat:'Structures & Pathways', tag:'Overhead → underground transition',
+    short:'The pole where an overhead conductor turns into a cable and goes down into the ground.',
+    long:'A riser pole marks the literal transition point from overhead to underground. The overhead conductor terminates at the top in a cable termination (a “pothead”), usually with a fuse or disconnect and surge arrester, and the insulated cable runs down the pole in a protective U-guard or riser conduit into the ground. It’s where crews do the transition splice, and it’s a common failure and inspection point — worth knowing about whenever a project converts overhead line to underground.'},
   {id:'conduit', name:'Conduit', cat:'Structures & Pathways', tag:'PVC · steel · fiber duct',
     short:'Protective pipe that underground cable is pulled through between vaults or manholes.',
     long:'Conduit doesn’t carry current itself — it protects cable from damage and lets crews pull new cable through later without excavating again. Installing extra ("spare") conduit during a project is a common low-cost way to reduce the cost of future upgrades, since digging is usually the expensive part of underground work.'},
@@ -430,21 +484,21 @@ const EQUIP = [
   {id:'cable', name:'Cable', cat:'Conductors', tag:'Insulated, usually underground',
     short:'Fully insulated conductor, typically run underground in conduit or direct-buried.',
     long:'Cable has a solid insulation layer because it’s often buried directly against soil or run through conduit with other cables nearby. Underground cable is more expensive to install than overhead wire but much less exposed to storms and trees — a classic reliability-vs-cost tradeoff PMs weigh in undergrounding projects.'},
-  {id:'switch', name:'Switch', cat:'Protection & Switching', tag:'Manual isolation',
+  {id:'switch', name:'Switch', cat:'Protection & Switching', tag:'Isolation · shown N.C. (normally closed)',
     short:'A manually operated device used to isolate a section of line — not built to interrupt fault current.',
-    long:'Switches let crews open or close a section of circuit for maintenance or to reconfigure power flow (e.g., feeding a neighborhood from a different feeder during an outage). Unlike breakers or reclosers, a basic disconnect switch generally isn’t rated to safely interrupt a fault — it’s for isolating already-de-energized or normal-load sections.'},
+    long:'Switches let crews open or close a section of circuit for maintenance or to reconfigure power flow (e.g., feeding a neighborhood from a different feeder during an outage). Unlike breakers or reclosers, a basic disconnect switch generally isn’t rated to safely interrupt a fault — it’s for isolating already-de-energized or normal-load sections. On a one-line, every switch is labeled with its normal state: N.C. (normally closed, carrying load) or N.O. (normally open, like a feeder tie). When a switch is SCADA-equipped, an operator can see its status and open or close it remotely from the control center.'},
   {id:'fuse', name:'Fuse', cat:'Protection & Switching', tag:'One-time protection',
     short:'A sacrificial device that permanently opens the circuit when current exceeds a threshold.',
     long:'Fuses protect laterals and transformers cheaply: when a fault occurs, the fuse element melts and must be physically replaced before service is restored. Because there’s no automatic reclosing, a fuse operation on a lateral means a truck roll — one reason utilities are selective about where fuses vs. more expensive automated devices get deployed.'},
-  {id:'recloser', name:'Recloser', cat:'Protection & Switching', tag:'Automatic, multi-shot',
-    short:'An automatic breaker that opens on a fault, then tries reclosing — since most faults are momentary.',
-    long:'Most faults (a tree branch brushing a line, a lightning strike) are transient and clear themselves in a fraction of a second. A recloser opens the circuit, waits briefly, and tries closing again — usually a few times — before giving up and staying open (a "lockout") if the fault is permanent. This dramatically cuts the number of sustained outages compared to fuses alone, which is why reclosers are a common target for reliability-improvement capital programs.'},
+  {id:'recloser', name:'Recloser', cat:'Protection & Switching', tag:'Automatic, multi-shot · N.C.',
+    short:'A self-contained breaker with built-in relaying that opens on a fault, then tries reclosing — since most faults are momentary.',
+    long:'A recloser is a self-contained circuit breaker with built-in relaying: it senses fault current, opens automatically, waits a set interval, and recloses to test whether the fault cleared (a tree branch, momentary contact) or persists (a downed conductor). It typically goes through 2–4 operations before locking out and staying open — which is why you’ll sometimes see the lights blink a few times before an outage actually sticks. That’s the recloser doing its job. Most faults (a tree branch brushing a line, a lightning strike) are transient and clear themselves in a fraction of a second. A recloser opens the circuit, waits briefly, and tries closing again — usually a few times — before giving up and staying open (a "lockout") if the fault is permanent. This dramatically cuts the number of sustained outages compared to fuses alone, which is why reclosers are a common target for reliability-improvement capital programs.'},
   {id:'feedertie', name:'Feeder Tie / Normally-Open Point', cat:'Automation & Resilience', tag:'Switch, normally OPEN',
     short:'A switch connecting two feeders that stays open in normal operation — closed to restore power from a neighbor during an outage.',
     long:'Feeders are usually built as loops between two substations (or two points on the same substation) but operated "open" at one point, splitting the loop into two radial circuits. That open point is the tie. If a fault takes out the upstream half of one feeder, crews (or automation) can open a device to isolate the fault, then close the tie switch to backfeed the stranded customers from the healthy neighboring feeder. Where you place ties, and how many customers each one can carry, is a core distribution-planning decision — it directly determines how many customers can be restored quickly instead of waiting for a repair crew.'},
   {id:'scada', name:'SCADA / Distribution Automation', cat:'Automation & Resilience', tag:'Monitoring + remote control',
     short:'The remote monitoring and control layer laid over switches, reclosers, and substations.',
-    long:'SCADA (Supervisory Control and Data Acquisition) is the software and communications system that lets operators see the state of remote devices (is this switch open or closed? how much current is flowing?) and operate them from a control room instead of dispatching a truck. "Distribution automation" goes a step further, letting devices act on their own logic — for example, a scheme of reclosers and tie switches that automatically isolates a fault and restores everyone else within seconds (FLISR: Fault Location, Isolation, and Service Restoration). This is usually the single biggest reliability lever available short of rebuilding lines, but it requires investment in communications infrastructure, not just the switches themselves.'}
+    long:'SCADA (Supervisory Control and Data Acquisition) is the software and communications system that lets operators see the state of remote devices (is this switch open or closed? how much current is flowing?) and operate them from a control room instead of dispatching a truck. "Distribution automation" goes a step further, letting devices act on their own logic — for example, a scheme of reclosers and tie switches that automatically isolates a fault and restores everyone else within seconds (FLISR: Fault Location, Isolation, and Service Restoration). This is usually the single biggest reliability lever available short of rebuilding lines, but it requires investment in communications infrastructure, not just the switches themselves. Not every device is SCADA-equipped: fuses and most transformers are purely local, non-communicating devices.'}
 ];
 
 const CATS = ['All', ...Array.from(new Set(EQUIP.map(e=>e.cat)))];
@@ -464,142 +518,128 @@ function eq(id){ return EQUIP.find(e=>e.id===id); }
 
 function buildDiagram(){
   const svg = document.getElementById('diagramSvg');
-  const AMBER = 'var(--signal-amber)', CYAN='var(--line-cyan)', COPPER='var(--copper)', MUTE='#2A5478';
+  const AMBER = 'var(--signal-amber)', CYAN = 'var(--line-cyan)', HW = '#9FC0D6', POLE = '#5b7c94', SCADA = '#B9A9F2', FILL = '#0F2946';
+  const UG = 'stroke-dasharray="7 5"';
   const parts = [];
 
-  // helper to make a labeled node group
-  function node(id, x, y, shape){
-    return `<g class="node" data-id="${id}" transform="translate(${x},${y})">${shape}</g>`;
+  function node(id, shape){ return `<g class="node" data-id="${id}">${shape}</g>`; }
+  function label(x,y,text,anchor='middle',fill='#9FC0D6',size=11){
+    return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="IBM Plex Mono" font-size="${size}" fill="${fill}">${text}</text>`;
   }
-  function label(x,y,text,anchor='middle'){
-    return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-family="IBM Plex Mono" font-size="11" fill="#9FC0D6">${text}</text>`;
+  function house(cx, y, color, dashed){
+    return `<polygon points="${cx},${y} ${cx+20},${y+18} ${cx+14},${y+18} ${cx+14},${y+34} ${cx-14},${y+34} ${cx-14},${y+18} ${cx-20},${y+18}" fill="${FILL}" stroke="${color}" stroke-width="2" ${dashed?'stroke-dasharray="4 3"':''}/>`;
   }
+  const FY = 196; // feeder elevation
 
-  // base lines
-  parts.push(`<line x1="120" y1="90" x2="560" y2="90" stroke="${AMBER}" stroke-width="3"/>`); // feeder overhead
-  parts.push(`<line x1="560" y1="90" x2="820" y2="90" stroke="${AMBER}" stroke-width="3" stroke-dasharray="2 6"/>`); // feeder continues off-diagram
-  parts.push(`<line x1="330" y1="90" x2="330" y2="150" stroke="${AMBER}" stroke-width="2.5"/>`); // drop to fuse
-  parts.push(`<line x1="330" y1="150" x2="330" y2="200" stroke="${AMBER}" stroke-width="2.5"/>`); // fuse to lateral pole-xfmr
-  parts.push(`<line x1="330" y1="230" x2="330" y2="270" stroke="${CYAN}" stroke-width="2.5"/>`); // xfmr to house (secondary)
-  parts.push(`<line x1="640" y1="90" x2="640" y2="150" stroke="${AMBER}" stroke-width="2.5" stroke-dasharray="4 3"/>`); // underground riser
-  parts.push(`<line x1="640" y1="150" x2="640" y2="230" stroke="${COPPER}" stroke-width="3"/>`); // conduit/cable run down
-  parts.push(`<line x1="640" y1="230" x2="640" y2="270" stroke="${CYAN}" stroke-width="2.5"/>`); // vault xfmr to house secondary
-  parts.push(`<line x1="180" y1="90" x2="180" y2="130" stroke="${AMBER}" stroke-width="2"/>`);
-
-  // poles along overhead feeder
-  [160,240,470,540].forEach(x=>{
-    parts.push(`<line x1="${x}" y1="90" x2="${x}" y2="120" stroke="#5b7c94" stroke-width="2"/>`);
-  });
-
-  // SUBSTATION
-  parts.push(node('substation', 60, 60, `
-    <rect x="0" y="0" width="70" height="60" rx="4" fill="#0F2946" stroke="${COPPER}" stroke-width="2"/>
-    <circle cx="25" cy="30" r="14" fill="none" stroke="${AMBER}" stroke-width="2.5"/>
-    <circle cx="45" cy="30" r="14" fill="none" stroke="${AMBER}" stroke-width="2.5"/>
+  // ---- SCADA control center + comms (drawn first so everything sits on top)
+  parts.push(`<path d="M860,82 L860,118 L230,118 L230,184" fill="none" stroke="${SCADA}" stroke-width="1.6" stroke-dasharray="1 5" stroke-linecap="round"/>`);
+  parts.push(`<path d="M620,118 L620,184" fill="none" stroke="${SCADA}" stroke-width="1.6" stroke-dasharray="1 5" stroke-linecap="round"/>`);
+  parts.push(label(425,112,'monitoring / control','middle',SCADA,10));
+  parts.push(node('scada', `
+    <rect x="780" y="24" width="160" height="58" rx="8" fill="${FILL}" stroke="${SCADA}" stroke-width="2"/>
+    ${label(860,48,'SCADA','middle','#E4DCFF',13)}
+    ${label(860,67,'control center','middle',SCADA,11)}
   `));
-  parts.push(label(95,145,'SUBSTATION'));
 
-  // RECLOSER at substation exit
-  parts.push(node('recloser', 165, 78, `
-    <rect x="0" y="0" width="30" height="24" rx="3" fill="#241203" stroke="${AMBER}" stroke-width="2"/>
-    <line x1="7" y1="6" x2="23" y2="18" stroke="${AMBER}" stroke-width="2"/>
-    <line x1="23" y1="6" x2="7" y2="18" stroke="${AMBER}" stroke-width="2"/>
+  // ---- FEEDER: 3-phase overhead primary backbone
+  parts.push(node('feeder', `
+    <line x1="170" y1="${FY}" x2="930" y2="${FY}" stroke="${AMBER}" stroke-width="3.5"/>
+    <polyline points="920,${FY-7} 932,${FY} 920,${FY+7}" fill="none" stroke="${AMBER}" stroke-width="2.5"/>
+    <line class="hit" x1="170" y1="${FY}" x2="930" y2="${FY}"/>
+    ${label(470,FY-14,'FEEDER (PRIMARY, ~12kV, 3φ, OH)','middle','#F5C877')}
   `));
-  parts.push(label(180,118,'RECLOSER'));
+  parts.push(label(955,FY+4,'…','middle','#F5C877',14));
 
-  // SWITCH mid-feeder
-  parts.push(node('switch', 470, 78, `
-    <rect x="0" y="0" width="26" height="24" rx="3" fill="#0F2946" stroke="${CYAN}" stroke-width="2"/>
-    <line x1="5" y1="18" x2="19" y2="6" stroke="${CYAN}" stroke-width="2"/>
+  // overhead poles along the feeder (short ticks)
+  parts.push(node('pole', [290,450,540,850].map(x=>
+    `<line x1="${x}" y1="${FY}" x2="${x}" y2="${FY+16}" stroke="${POLE}" stroke-width="3"/><rect x="${x-8}" y="${FY-8}" width="16" height="30" fill="transparent"/>`).join('')));
+
+  // ---- SUBSTATION
+  parts.push(node('substation', `
+    <rect x="40" y="168" width="130" height="56" rx="6" fill="${FILL}" stroke="${HW}" stroke-width="2"/>
+    <circle cx="80" cy="196" r="12" fill="none" stroke="${AMBER}" stroke-width="2"/>
+    <circle cx="96" cy="196" r="12" fill="none" stroke="${AMBER}" stroke-width="2"/>
+    ${label(140,200,'SUB','middle','#EAF2F5',12)}
   `));
-  parts.push(label(483,118,'SWITCH'));
+  parts.push(label(105,244,'SUBSTATION'));
 
-  // FUSE at lateral tap
-  parts.push(node('fuse', 315, 148, `
-    <rect x="0" y="0" width="30" height="14" rx="7" fill="#0F2946" stroke="${AMBER}" stroke-width="2"/>
+  // ---- RECLOSER (N.C.)
+  parts.push(node('recloser', `
+    <rect x="216" y="184" width="28" height="24" rx="4" fill="#241203" stroke="${AMBER}" stroke-width="2"/>
+    <line x1="223" y1="190" x2="237" y2="202" stroke="${AMBER}" stroke-width="2"/>
+    <line x1="237" y1="190" x2="223" y2="202" stroke="${AMBER}" stroke-width="2"/>
+    ${label(230,228,'RECLOSER (N.C.)')}
   `));
-  parts.push(label(330,142,'FUSE'));
 
-  // LATERAL label
-  parts.push(label(300,195,'LATERAL',"end"));
-
-  // Pole-mount transformer (overhead path)
-  parts.push(node('transformer', 315, 200, `
-    <circle cx="15" cy="15" r="16" fill="#0F2946" stroke="${COPPER}" stroke-width="2.5"/>
-    <circle cx="15" cy="15" r="7" fill="none" stroke="${COPPER}" stroke-width="2"/>
+  // ---- SWITCH (N.C.)
+  parts.push(node('switch', `
+    <rect x="607" y="184" width="26" height="24" rx="4" fill="${FILL}" stroke="${HW}" stroke-width="2"/>
+    <line x1="612" y1="202" x2="628" y2="190" stroke="${HW}" stroke-width="2"/>
+    ${label(620,228,'SWITCH (N.C.)')}
   `));
-  parts.push(label(330,240,'POLE XFMR'));
 
-  // House 1 (overhead / lateral customer)
-  parts.push(node('service', 310, 270, `
-    <polygon points="20,0 40,20 34,20 34,38 6,38 6,20 0,20" fill="#0F2946" stroke="${CYAN}" stroke-width="2"/>
+  // ---- OVERHEAD LATERAL branch (x=360)
+  const LX = 360;
+  parts.push(`<circle cx="${LX}" cy="${FY}" r="4" fill="${AMBER}"/>`);
+  parts.push(node('lateral', `
+    <line x1="${LX}" y1="${FY}" x2="${LX}" y2="262" stroke="${AMBER}" stroke-width="2.5"/>
+    <line x1="${LX}" y1="278" x2="${LX}" y2="318" stroke="${AMBER}" stroke-width="2.5"/>
+    <line class="hit" x1="${LX}" y1="${FY}" x2="${LX}" y2="318"/>
+    ${label(LX+14,244,'LATERAL (1φ TAP, OH)','start','#F5C877')}
   `));
-  parts.push(label(330,325,'SERVICE DROP'));
-
-  // pole for lateral riser
-  parts.push(node('pole', 250, 150, `
-    <rect x="0" y="0" width="6" height="70" fill="#5b7c94"/>
-    <rect x="-14" y="6" width="34" height="4" fill="#5b7c94"/>
+  parts.push(node('fuse', `
+    <rect x="${LX-15}" y="262" width="30" height="16" rx="8" fill="#241203" stroke="${AMBER}" stroke-width="2"/>
+    ${label(LX+24,275,'FUSE','start')}
   `));
-  parts.push(label(255,232,'POLE'));
-
-  // Underground riser -> conduit -> vault
-  parts.push(node('conduit', 620, 150, `
-    <rect x="0" y="0" width="40" height="18" rx="9" fill="#241408" stroke="${COPPER}" stroke-width="2"/>
+  parts.push(node('transformer', `
+    <circle cx="${LX}" cy="338" r="20" fill="${FILL}" stroke="${HW}" stroke-width="2"/>
+    <circle cx="${LX}" cy="338" r="8" fill="none" stroke="${HW}" stroke-width="1.5"/>
+    ${label(LX+30,342,'POLE TRANSFORMER','start')}
   `));
-  parts.push(label(640,180,'CONDUIT'));
-
-  parts.push(node('cable', 615, 195, `
-    <rect x="0" y="0" width="50" height="10" rx="5" fill="#241408" stroke="${COPPER}" stroke-width="2"/>
+  parts.push(node('service', `
+    <line x1="${LX}" y1="358" x2="${LX}" y2="418" stroke="${CYAN}" stroke-width="2.5"/>
+    <line class="hit" x1="${LX}" y1="358" x2="${LX}" y2="418"/>
+    ${label(LX+14,392,'SERVICE DROP (OH)','start','#BDEFF6')}
+    ${house(LX,418,CYAN,false)}
+    ${label(LX,470,'CUSTOMER')}
   `));
-  parts.push(label(640,178+38,'CABLE',"middle"));
 
-  parts.push(node('vault', 600, 220, `
-    <rect x="0" y="0" width="80" height="40" rx="4" fill="#0F2946" stroke="${COPPER}" stroke-width="2.5" stroke-dasharray="5 3"/>
-    <circle cx="40" cy="20" r="12" fill="none" stroke="${COPPER}" stroke-width="2"/>
+  // ---- UNDERGROUND branch via riser pole (x=740)
+  const RX = 740;
+  parts.push(`<circle cx="${RX}" cy="${FY}" r="4" fill="${AMBER}"/>`);
+  parts.push(node('riser', `
+    <rect x="${RX-3}" y="${FY}" width="6" height="52" fill="${POLE}"/>
+    <rect x="${RX-12}" y="${FY+4}" width="24" height="4" fill="${POLE}"/>
+    <rect x="${RX-12}" y="${FY}" width="24" height="56" fill="transparent"/>
+    ${label(RX+16,228,'RISER POLE (OH → UG)','start')}
   `));
-  parts.push(label(640,278,'VAULT (XFMR)'));
-
-  // House 2 (underground customer)
-  parts.push(node('service', 620, 270, `
-    <polygon points="20,0 40,20 34,20 34,38 6,38 6,20 0,20" fill="#0F2946" stroke="${CYAN}" stroke-width="2"/>
+  parts.push(node('cable', `
+    <line x1="${RX}" y1="248" x2="${RX}" y2="296" stroke="${AMBER}" stroke-width="2.5" ${UG}/>
+    <line class="hit" x1="${RX}" y1="248" x2="${RX}" y2="296"/>
+    ${label(RX+16,270,'UG PRIMARY CABLE (in conduit)','start','#F5C877')}
   `));
-  parts.push(label(640,325,'SERVICE DROP'));
-
-  // feeder label
-  parts.push(label(400,75,'FEEDER (PRIMARY, ~12kV)'));
-
-  // FEEDER TIE / normally-open point, plus the neighboring feeder it can backfeed from
-  parts.push(`<line x1="820" y1="90" x2="860" y2="90" stroke="${AMBER}" stroke-width="3" stroke-dasharray="2 6"/>`);
-  parts.push(node('feedertie', 848, 78, `
-    <rect x="0" y="0" width="26" height="24" rx="3" fill="#0F2946" stroke="${CYAN}" stroke-width="2" stroke-dasharray="3 3"/>
-    <line x1="5" y1="18" x2="19" y2="6" stroke="${CYAN}" stroke-width="2"/>
+  parts.push(node('vault', `
+    <rect x="${RX-78}" y="296" width="156" height="96" rx="8" fill="${FILL}" stroke="${HW}" stroke-width="1.5" stroke-dasharray="5 4"/>
+    ${label(RX,314,'VAULT (UNDERGROUND)','middle','#EAF2F5',11)}
   `));
-  parts.push(label(861,60,'TIE (NORMALLY OPEN)'));
-  parts.push(`<line x1="861" y1="102" x2="861" y2="140" stroke="${CYAN}" stroke-width="2" stroke-dasharray="4 3"/>`);
-  parts.push(`<line x1="820" y1="140" x2="905" y2="140" stroke="${CYAN}" stroke-width="2.5" stroke-dasharray="2 6"/>`);
-  parts.push(label(861,158,'NEIGHBORING FEEDER',"middle"));
-  parts.push(label(861,170,'(backfeed source)',"middle"));
-
-  // SCADA / distribution automation overlay — dotted comm links from the control center to the remote-controlled devices
-  parts.push(node('scada', 435, 12, `
-    <rect x="0" y="0" width="34" height="24" rx="3" fill="#0F2946" stroke="${CYAN}" stroke-width="2"/>
-    <line x1="8" y1="0" x2="8" y2="-8" stroke="${CYAN}" stroke-width="2"/>
-    <line x1="26" y1="0" x2="26" y2="-8" stroke="${CYAN}" stroke-width="2"/>
-    <circle cx="8" cy="-10" r="2" fill="${CYAN}"/>
-    <circle cx="26" cy="-10" r="2" fill="${CYAN}"/>
+  parts.push(node('transformer', `
+    <circle cx="${RX}" cy="348" r="18" fill="${FILL}" stroke="${HW}" stroke-width="2"/>
+    <circle cx="${RX}" cy="348" r="7" fill="none" stroke="${HW}" stroke-width="1.5"/>
+    ${label(RX,382,'VAULT XFMR')}
   `));
-  parts.push(label(452,45,'SCADA / CONTROL CENTER'));
-  parts.push(`<path d="M452,36 L452,55 L180,55 L180,76" fill="none" stroke="${CYAN}" stroke-width="1.5" stroke-dasharray="1 5"/>`);
-  parts.push(`<path d="M452,36 L452,55 L483,55 L483,76" fill="none" stroke="${CYAN}" stroke-width="1.5" stroke-dasharray="1 5"/>`);
-  parts.push(`<path d="M469,36 L469,50 L861,50 L861,76" fill="none" stroke="${CYAN}" stroke-width="1.5" stroke-dasharray="1 5"/>`);
+  parts.push(node('servicelateral', `
+    <line x1="${RX}" y1="392" x2="${RX}" y2="438" stroke="${CYAN}" stroke-width="2.5" ${UG}/>
+    <line class="hit" x1="${RX}" y1="392" x2="${RX}" y2="438"/>
+    ${label(RX+14,418,'SERVICE LATERAL (UG)','start','#BDEFF6')}
+    ${house(RX,438,CYAN,false)}
+    ${label(RX,490,'CUSTOMER')}
+  `));
 
   svg.innerHTML = parts.join('');
 
   svg.querySelectorAll('.node').forEach(n=>{
     n.addEventListener('click', ()=>{
-      svg.querySelectorAll('.node').forEach(x=>x.classList.remove('selected'));
-      n.classList.add('selected');
+      svg.querySelectorAll('.node').forEach(x=>x.classList.toggle('selected', x.dataset.id===n.dataset.id));
       showInfo(n.dataset.id);
     });
   });
@@ -691,7 +731,10 @@ const QUIZ_BANK = [
   {q:'What is a feeder tie (normally-open point)?', a:'A switch between two feeders that stays open, closed to backfeed customers from a neighboring circuit during an outage', opts:['A permanent connection between two substations','A switch between two feeders that stays open, closed to backfeed customers from a neighboring circuit during an outage','A type of fuse used only on laterals','A backup generator at a substation'], exp:'Feeders are often built as loops but operated open at one point. Closing that tie point lets a neighboring feeder pick up stranded customers after a fault is isolated.'},
   {q:'What does SCADA add on top of a recloser or switch that already works automatically?', a:'Remote visibility and control from a control room, without needing a truck at the device', opts:['Nothing — SCADA and reclosers are the same thing','Remote visibility and control from a control room, without needing a truck at the device','It replaces the need for fuses entirely','It only matters at the transmission level, not distribution'], exp:'SCADA is the monitoring/communications layer: it tells an operator what a device is doing and lets them (or automated logic) operate it remotely.'},
   {q:'SAIDI measures...', a:'The average number of outage-minutes a customer experienced over the year', opts:['The average number of separate interruptions per customer', 'The average number of outage-minutes a customer experienced over the year', 'The average repair cost per outage', 'The total number of customers served'], exp:'SAIDI = Σ(customers interrupted × outage minutes) ÷ total customers — the headline duration metric.'},
-  {q:'A utility installs more reclosers and feeder ties. Which reliability metric are they most directly targeting?', a:'SAIFI — fewer sustained interruptions per customer', opts:['SAIFI — fewer sustained interruptions per customer','CAIDI — the average repair time once a crew arrives','None — these devices don’t affect reliability metrics','Only the cost per customer, not reliability'], exp:'Reclosers clear transient faults without a sustained outage at all, and ties let crews restore power fast by switching to a neighboring feeder — both cut the count of sustained interruptions, which is what SAIFI tracks.'}
+  {q:'A utility installs more reclosers and feeder ties. Which reliability metric are they most directly targeting?', a:'SAIFI — fewer sustained interruptions per customer', opts:['SAIFI — fewer sustained interruptions per customer','CAIDI — the average repair time once a crew arrives','None — these devices don’t affect reliability metrics','Only the cost per customer, not reliability'], exp:'Reclosers clear transient faults without a sustained outage at all, and ties let crews restore power fast by switching to a neighboring feeder — both cut the count of sustained interruptions, which is what SAIFI tracks.'},
+  {q:'A customer is fed by buried cable from a transformer in a vault. What is that final 120/240V run called?', a:'Service lateral', opts:['Service drop','Service lateral','Feeder','Riser'], exp:'“Service drop” is reserved for the overhead run from a pole transformer. The underground equivalent is a service lateral.'},
+  {q:'On a one-line diagram, where would you expect crews to make the overhead-to-underground transition splice?', a:'At a riser pole', opts:['At the substation fence','At a riser pole','Inside the customer’s meter','At the recloser'], exp:'The riser pole is the literal point where an overhead conductor terminates and becomes a cable running down the pole into the ground.'},
+  {q:'Why do the lights sometimes blink two or three times before an outage “sticks”?', a:'A recloser is opening and reclosing to test whether the fault has cleared before it locks out', opts:['The fuse is slowly melting','A recloser is opening and reclosing to test whether the fault has cleared before it locks out','SCADA is rebooting the feeder','The transformer is switching voltage levels'], exp:'A recloser typically makes 2–4 operations. If the fault is momentary (a branch brushing the line), service is restored; if it persists (a downed conductor), the recloser locks out and stays open.'}
 ];
 
 let quizOrder = shuffle(QUIZ_BANK);
@@ -946,6 +989,13 @@ const PG_CHAIN = [
   {kind:'source', x:1140}
 ];
 
+// x-position of any chain element: sources carry their own x; devices and nodes look theirs up
+function pgChainX(el){
+  if(el.kind==='device') return PG_DEVICES[el.dev].x;
+  if(el.kind==='node') return PG_NODES_BY_ID[el.node].x;
+  return el.x;
+}
+
 let pgTrunkFault = null;   // {nodeId}
 let pgLateralFault = null; // {nodeId}
 let pgLoopWarning = false;
@@ -1083,9 +1133,9 @@ function pgRender(){
     let energized = false;
     if(a.kind==='node') energized = PG_NODES_BY_ID[a.node].energized;
     else if(b.kind==='node') energized = PG_NODES_BY_ID[b.node].energized;
-    else if(a.kind==='source') energized = true;
+    else if(a.kind==='source' || b.kind==='source') energized = true; // the stub between a substation and its recloser is always live
     const col = energized ? 'var(--signal-amber)' : '#2a3b4a';
-    parts.push(`<line x1="${a.x}" y1="70" x2="${b.x}" y2="70" stroke="${col}" stroke-width="3"/>`);
+    parts.push(`<line x1="${pgChainX(a)}" y1="70" x2="${pgChainX(b)}" y2="70" stroke="${col}" stroke-width="3"/>`);
   }
   parts.push(`<text x="20" y="45" font-family="IBM Plex Mono" font-size="15" fill="var(--muted)">SUB A</text>`);
   parts.push(`<text x="1140" y="45" text-anchor="end" font-family="IBM Plex Mono" font-size="15" fill="var(--muted)">SUB B</text>`);
