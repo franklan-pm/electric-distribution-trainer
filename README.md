@@ -1,5 +1,7 @@
 # Electric Distribution Trainer
 
+> **This project has moved.** It is now chapter 2, *Distribution*, of the [Grid Field Guide](https://github.com/franklan-pm/grid-field-guide), live at **https://franklan.net/apps/02-distribution/**. This repo is archived, and its old web address forwards there. The text below describes the original version.
+
 **Live site:** https://franklan-pm.github.io/electric-distribution-trainer/
 
 The Electric Distribution Trainer is an interactive field guide to the equipment that carries power from a substation to a customer's meter. It's written for program managers and other non-engineers who work around distribution infrastructure and need to speak the language: what a feeder, lateral, recloser, riser pole, or vault actually is, how the pieces fit together, and why each one matters when you're planning or funding a project. Everything runs in a single HTML file with no install, no build step, and no dependencies. Open it in a browser and go.
